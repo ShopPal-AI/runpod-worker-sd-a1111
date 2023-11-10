@@ -21,7 +21,7 @@ RUN . /clone.sh BLIP https://github.com/salesforce/BLIP.git 48211a1594f1321b00f1
     . /clone.sh generative-models https://github.com/Stability-AI/generative-models 45c443b316737a4ab6e40413d7794a7f5657c19f
 
 RUN apk add --no-cache wget && \
-    wget -q -O /model.safetensors https://civitai.com/api/download/models/15236
+    wget -q -O /model.safetensors https://civitai.com/api/download/models/128078
 
 
 
@@ -41,7 +41,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN export COMMANDLINE_ARGS="--skip-torch-cuda-test --precision full --no-half"
-RUN export TORCH_COMMAND='pip install --pre torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/nightly/rocm5.6'
+RUN export TORCH_COMMAND='pip install --pre torch torchvision torchaudio --extra-index-url https://mirrors.aliyun.com/pypi/simple'
 
 RUN apt-get update && \
     apt install -y \
@@ -49,7 +49,7 @@ RUN apt-get update && \
     apt-get autoremove -y && rm -rf /var/lib/apt/lists/* && apt-get clean -y
 
 RUN --mount=type=cache,target=/cache --mount=type=cache,target=/root/.cache/pip \
-    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+    pip install torch torchvision torchaudio --index-url https://mirrors.aliyun.com/pypi/simple
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui.git && \
@@ -67,8 +67,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 COPY builder/requirements.txt /requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip && \
-    pip install --upgrade -r /requirements.txt --no-cache-dir && \
+    pip install --upgrade -r /requirements.txt --no-cache-dir --index-url https://mirrors.aliyun.com/pypi/simple && \
     rm /requirements.txt
+
+# workaround for bug: TypeError: AsyncConnectionPool.__init__() got an unexpected keyword argument 'socket_options'
+RUN pip install --no-cache-dir httpx==0.24.1
 
 ADD src .
 
@@ -82,4 +85,5 @@ RUN apt-get autoremove -y && \
 
 # Set permissions and specify the command to run
 RUN chmod +x /start.sh
-CMD /start.sh
+ENTRYPOINT ["/bin/bash", "-x", "/start.sh"]
+CMD []
